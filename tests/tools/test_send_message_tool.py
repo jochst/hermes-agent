@@ -772,9 +772,19 @@ class TestSendToPlatformChunking:
             async def disconnect(self):
                 calls.append(("disconnect",))
 
-        fake_module = SimpleNamespace(MatrixAdapter=FakeAdapter)
+        # Register the fake adapter in the plugin registry so
+        # _send_matrix_via_adapter finds it via registries.get_platform("matrix").
+        from agent.plugin_registries import registries, PlatformAdapterEntry
 
-        with patch.dict(sys.modules, {"gateway.platforms.matrix": fake_module}):
+        fake_entry = PlatformAdapterEntry(
+            name="matrix",
+            adapter_class=FakeAdapter,
+            check_requirements=lambda: True,
+        )
+        _prev = registries.platform_adapters.get("matrix")
+        registries.platform_adapters["matrix"] = fake_entry
+
+        try:
             result = asyncio.run(
                 _send_matrix_via_adapter(
                     SimpleNamespace(enabled=True, token="tok", extra={"homeserver": "https://matrix.example.com"}),
@@ -783,6 +793,11 @@ class TestSendToPlatformChunking:
                     media_files=[(str(file_path), False)],
                 )
             )
+        finally:
+            if _prev is not None:
+                registries.platform_adapters["matrix"] = _prev
+            else:
+                registries.platform_adapters.pop("matrix", None)
 
         assert result == {
             "success": True,

@@ -25,6 +25,24 @@ def _ensure_telegram_mock():
     # plugin specs.  Without this, ``mod.pytest_plugins`` returns a child
     # MagicMock which trips _get_plugin_specs_as_list().
     mod.pytest_plugins = None
+    # Suppress xunit-style setup/teardown names so pytest's
+    # _get_first_non_fixture_func() never picks up auto-generated child
+    # mocks as real fixtures.  Without this, Package.setup() finds a
+    # MagicMock setUpModule, tries to inspect .__code__, and blows up.
+    for _xunit_name in (
+        "setUpModule", "setup_module",
+        "tearDownModule", "teardown_module",
+        "setUpClass", "setup_class",
+        "tearDownClass", "teardown_class",
+        "setUpFunction", "setup_function",
+        "tearDownFunction", "teardown_function",
+        "setUpMethod", "setup_method",
+        "tearDownMethod", "teardown_method",
+    ):
+        try:
+            delattr(mod, _xunit_name)
+        except AttributeError:
+            pass
     for name in ("telegram", "telegram.ext", "telegram.constants", "telegram.request"):
         sys.modules.setdefault(name, mod)
 

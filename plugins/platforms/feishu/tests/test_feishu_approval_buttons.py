@@ -38,6 +38,7 @@ def _ensure_feishu_mocks():
 _ensure_feishu_mocks()
 
 from gateway.config import PlatformConfig
+from hermes_agent_feishu import adapter as feishu_adapter
 import hermes_agent_feishu as feishu_module
 from hermes_agent_feishu.adapter import FeishuAdapter
 
@@ -456,8 +457,8 @@ class _FakeP2Response:
 @pytest.fixture(autouse=False)
 def _patch_callback_card_types(monkeypatch):
     """Provide real-ish P2CardActionTriggerResponse / CallBackCard for tests."""
-    monkeypatch.setattr(feishu_module, "P2CardActionTriggerResponse", _FakeP2Response)
-    monkeypatch.setattr(feishu_module, "CallBackCard", _FakeCallBackCard)
+    monkeypatch.setattr(feishu_adapter, "P2CardActionTriggerResponse", _FakeP2Response)
+    monkeypatch.setattr(feishu_adapter, "CallBackCard", _FakeCallBackCard)
 
 
 class TestCardActionCallbackResponse:

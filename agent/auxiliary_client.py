@@ -150,6 +150,35 @@ def _safe_isinstance(obj: Any, maybe_type: Any) -> bool:
         return False
 
 
+def _is_async_client(client: Any) -> bool:
+    """Check whether *client* is already an async-capable auxiliary client.
+
+    Covers AsyncAnthropicAuxiliaryClient, AsyncCodexAuxiliaryClient,
+    AsyncGeminiNativeClient, and CopilotACPClient (which is natively async).
+    """
+    if _safe_isinstance(client, AsyncCodexAuxiliaryClient):
+        return True
+    try:
+        from agent.anthropic_aux import AsyncAnthropicAuxiliaryClient
+        if _safe_isinstance(client, AsyncAnthropicAuxiliaryClient):
+            return True
+    except ImportError:
+        pass
+    try:
+        from agent.gemini_native_adapter import AsyncGeminiNativeClient
+        if _safe_isinstance(client, AsyncGeminiNativeClient):
+            return True
+    except ImportError:
+        pass
+    try:
+        from agent.copilot_acp_client import CopilotACPClient
+        if _safe_isinstance(client, CopilotACPClient):
+            return True
+    except ImportError:
+        pass
+    return False
+
+
 def _extract_url_query_params(url: str):
     """Extract query params from URL, return (clean_url, default_query dict or None)."""
     parsed = urlparse(url)
@@ -3327,8 +3356,13 @@ def resolve_provider_client(
         )
         if client is not None:
             final_model = _normalize_resolved_model(model or default_model, provider)
-            return (_to_async_client(client, final_model, is_vision=is_vision) if async_mode
-                    else (client, final_model))
+            # Resolvers that accept async_mode may already return an async
+            # client (e.g. bedrock returns AsyncAnthropicAuxiliaryClient).
+            # Don't double-wrap — only call _to_async_client when the
+            # resolver returned a sync client despite async_mode=True.
+            if async_mode and not _is_async_client(client):
+                return _to_async_client(client, final_model, is_vision=is_vision)
+            return client, final_model
         # Resolver returned None — provider unavailable
         logger.warning(
             "resolve_provider_client: %s requested but resolver returned "

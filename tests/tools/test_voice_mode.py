@@ -759,7 +759,7 @@ class TestTranscribeRecording:
                 "provider": "local",
             }
 
-        with _patch_stt_provider(transcribe_audio=MagicMock(side_effect=fake_transcribe)):
+        with _patch_stt_provider(transcribe_audio=MagicMock(side_effect=fake_transcribe), max_file_size=70 * 1024):
             from tools.voice_mode import transcribe_recording
             result = transcribe_recording(str(wav_path), model="base")
 
@@ -789,7 +789,7 @@ class TestTranscribeRecording:
         def fake_transcribe(path, model=None):
             return {"success": False, "transcript": "", "error": "provider rejected audio"}
 
-        with _patch_stt_provider(transcribe_audio=MagicMock(side_effect=fake_transcribe)):
+        with _patch_stt_provider(transcribe_audio=MagicMock(side_effect=fake_transcribe), max_file_size=70 * 1024):
             from tools.voice_mode import transcribe_recording
             result = transcribe_recording(str(wav_path), model="base")
 
